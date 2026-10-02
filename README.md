@@ -1,4 +1,4 @@
-# HyperLoRA
+# Events as Triggers for Behavioral Diversity in Multi-Agent Reinforcement Learning
 
 Code to train the methods compared in *Events as Triggers for Behavioral Diversity in Multi-Agent
 Reinforcement Learning* — Ours, parameter sharing (PS), DiCo, CASH and HyperMARL — on the paper's
