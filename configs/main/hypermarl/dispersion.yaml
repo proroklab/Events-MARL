@@ -1,0 +1,74 @@
+env:
+  ENV_NAME: dispersion_vmas
+  env:
+    use_fixed_capabilities: false
+    homogeneous_capabilities: true
+    max_speed_range:
+    - 0.5
+    - 1.5
+    fixed_capabilities:
+      max_speed:
+      - 0.75
+      - 1.0
+      - 1.25
+      - 1.5
+  ENV_KWARGS:
+    one_hot_encode_agent_id: true
+    n_agents: 4
+    n_food: 4
+    penalise_by_time: false
+    share_reward: false
+    food_radius: 0.05
+    pos_range: 1.0
+    continuous_actions: true
+ENV_NAME: dispersion_vmas
+ALG: HyperMARL(MAPPO)
+LR: 0.001
+NUM_ENVS: 128
+NUM_STEPS: 200
+TOTAL_TIMESTEPS: 20480000
+UPDATE_EPOCHS: 4
+NUM_MINIBATCHES: 8
+GAMMA: 0.99
+GAE_LAMBDA: 0.95
+CLIP_EPS: 0.2
+ENT_COEF: 0.01
+VF_COEF: 0.5
+MAX_GRAD_NORM: 0.5
+ACTIVATION: relu
+ANNEAL_LR: false
+HYPERNET_EMBEDDING_DIM: 8
+USE_AGENT_ID_EMBEDDINGS: true
+USE_BIAS_IN_HYPERNET: true
+HYPERNET_HIDDEN_DIMS:
+- 64
+SEED: 30
+JAX_THREEFRY_PARTITIONABLE: true
+NUM_SEEDS: 1
+ACTOR_LAYERS:
+- 64
+- 64
+CRITIC_LAYERS:
+- 64
+- 64
+INIT_SCALE: 1.41421356
+EXP_NAME: hypermarl_dispersion
+EVAL_INTERVAL: 100000
+EVAL_EPISODES: 32
+EVAL_DETERMINISTIC: true
+EVAL_PARALLEL: true
+USE_CUSTOM_EVAL: true
+MAX_EVAL_STEPS: 200
+TEST_ENV_KWARGS:
+  penalise_by_time: false
+TRAIN_ENV_KWARGS:
+  auto_reset: true
+  penalise_by_time: false
+ACTION_SPACE_TYPE: continuous
+REWARD_SCALE: 1.0
+REWARD_CLIP: 10.0
+CAPTURE_VIDEO_INTERVAL: 5000000
+CHECKPOINT_INTERVAL: 1000000
+CHECKPOINT: false
+HANDLE_TERMINAL_OBS: true
+SAVE_EMBEDDINGS_INTERVAL: 5000

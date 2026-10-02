@@ -1,0 +1,81 @@
+env:
+  ENV_NAME: pressure_plate
+  env:
+    use_fixed_capabilities: true
+    fixed_capabilities:
+      speed:
+      - 0.8
+      - 1.0
+      - 1.2
+  ENV_KWARGS:
+    one_hot_encode_agent_id: true
+    n_agents: 3
+    n_ground_robots: 3
+    x_semidim: 2.0
+    y_semidim: 2.0
+    plate_radius: 0.3
+    plate_margin: 1.0
+    random_plate_positions: true
+    door_size: 0.9
+    goal_radius: 0.3
+    with_drone: false
+    use_global_obs: true
+    reward_type: sparse
+    plate_left_reward: 0.2
+    plate_right_reward: 1.0
+    goal_reward: 100.0
+    time_penalty: 0.0
+    training_spawn_side: left
+    penalise_by_time: false
+    share_reward: true
+    distance_shaping_coef: 2.0
+    continuous_actions: true
+ENV_NAME: pressure_plate
+ALG: HyperMARL(MAPPO)
+LR: 0.0001
+NUM_ENVS: 128
+NUM_STEPS: 200
+TOTAL_TIMESTEPS: 6000000.0
+UPDATE_EPOCHS: 4
+NUM_MINIBATCHES: 8
+GAMMA: 0.99
+GAE_LAMBDA: 0.95
+CLIP_EPS: 0.2
+ENT_COEF: 0.01
+VF_COEF: 0.5
+MAX_GRAD_NORM: 0.5
+ACTIVATION: relu
+ANNEAL_LR: false
+HYPERNET_EMBEDDING_DIM: 8
+USE_AGENT_ID_EMBEDDINGS: true
+USE_BIAS_IN_HYPERNET: true
+HYPERNET_HIDDEN_DIMS:
+- 64
+SEED: 30
+JAX_THREEFRY_PARTITIONABLE: false
+NUM_SEEDS: 1
+ACTOR_LAYERS:
+- 64
+- 64
+CRITIC_LAYERS:
+- 64
+- 64
+INIT_SCALE: 1.41421356
+EXP_NAME: hypermarl_pressure_plate
+EVAL_INTERVAL: 100000
+EVAL_EPISODES: 32
+EVAL_DETERMINISTIC: true
+EVAL_PARALLEL: true
+USE_CUSTOM_EVAL: true
+MAX_EVAL_STEPS: 200
+TEST_ENV_KWARGS: {}
+TRAIN_ENV_KWARGS:
+  auto_reset: true
+ACTION_SPACE_TYPE: continuous
+REWARD_SCALE: 1.0
+REWARD_CLIP: 10.0
+CAPTURE_VIDEO_INTERVAL: 5000000
+CHECKPOINT_INTERVAL: 1000000
+CHECKPOINT: false
+HANDLE_TERMINAL_OBS: true
+SAVE_EMBEDDINGS_INTERVAL: 5000

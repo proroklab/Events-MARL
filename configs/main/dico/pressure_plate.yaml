@@ -1,0 +1,139 @@
+method: dico
+seed: 0
+jax_threefry_partitionable: false
+env:
+  scenario: pressure_plate
+  num_agents: 3
+  max_agents: 3
+  num_envs: 128
+  continuous_actions: true
+  penalise_by_time: false
+  share_reward: true
+  distance_shaping_coef: 2.0
+  mixed_agent_training: false
+  min_agents: 3
+  use_fixed_capabilities: true
+  homogeneous_capabilities: true
+  fixed_capabilities:
+    speed:
+    - 0.8
+    - 1.0
+    - 1.2
+  fixed_food_positions: false
+  speed_range:
+  - 0.5
+  - 1.5
+  lidar_range_range:
+  - 0.3
+  - 0.7
+  max_speed_range:
+  - 0.5
+  - 1.5
+  force_multiplier_range:
+  - 0.5
+  - 1.5
+  scenario_kwargs:
+    x_semidim: 2.0
+    y_semidim: 2.0
+    plate_radius: 0.3
+    plate_margin: 1.0
+    door_size: 0.9
+    goal_radius: 0.3
+    with_drone: false
+    use_global_obs: true
+    plate_reward: 0.1
+    goal_reward: 100.0
+    time_penalty: 0.0
+    reward_type: sparse
+    training_spawn_side: left
+model:
+  policy_hidden_dims:
+  - 128
+  - 128
+  critic_hidden_dim: 128
+  critic_num_layers: 2
+  use_shared_critic: false
+  log_std_max: 0.0
+  log_std_min: -2.0
+  min_std: 0.3
+  lora_rank: 8
+  lora_mode: final_only
+  lora_scaling_factor: 1.0
+  transformer_dim: 64
+  transformer_heads: 2
+  transformer_layers: 2
+  use_cross_agent_attention: true
+  task_embed_dim: 0
+  target_snd_dim: 0
+  use_capability_context: false
+  use_lidar_context: false
+  use_positional_context: false
+  positional_encoding_dim: 16
+  use_onehot_context: true
+  use_agent_position_context: false
+  agent_position_dim: 0
+  env_context: {}
+  gru_hidden_dim: null
+  fc_dim_size: null
+  cash_hyper_hidden_dim: null
+  cash_hyper_layers: null
+  cash_decoder_hidden_dim: null
+  cash_use_two_layer_decoder: null
+  adaptive_hypernetwork: false
+ppo:
+  num_episodes: 210
+  rollout_steps: 200
+  ppo_epochs: 4
+  ppo_clip_epsilon: 0.2
+  entropy_coef: 0.01
+  entropy_decay: 1.0
+  min_entropy_coef: 0.0
+  value_loss_coef: 0.25
+  gamma: 0.99
+  gae_lambda: 0.95
+  reward_scale: 1.0
+  advantage_clip_range: 10.0
+  normalize_returns: false
+  clip_value_loss: true
+  clip_global_state: true
+  clip_global_state_min: -100.0
+  clip_global_state_max: 100.0
+  use_minibatches: true
+  num_minibatches: 8
+  shuffle_minibatches: true
+  max_grad_norm: 0.5
+  hypernetwork_grad_norm: 0.1
+  critic_grad_norm: 0.1
+  adapter_regularization_coef: 0.1
+diversity:
+  use_diversity_control: true
+  use_adapter_snd: false
+  target_snd: 1.0
+  snd_moving_average_coef: 0.1
+  max_diversity_scaling: 100.0
+  min_snd_floor: 1.0e-06
+  num_snd_samples: 32
+  adapter_snd_sample_size: 128
+  target_snd_list: []
+  target_snd_change_interval: 0
+  target_snd_mode: cycle
+  target_snd_sampler: {}
+optimizer:
+  learning_rate: 0.0006
+  hn_learning_rate: 0.0006
+  critic_learning_rate: 0.0003
+  beta1: 0.9
+  beta2: 0.999
+  eps: 1.0e-08
+evaluation:
+  eval_interval: 20
+  eval_start_episode: 0
+  num_eval_episodes: 10
+  eval_max_speeds: []
+  max_eval_steps: 200
+  match_training_capabilities: false
+logging:
+  log_dir: runs/dico_pressure_plate/logs
+  checkpoint_dir: runs/dico_pressure_plate/checkpoints
+  save_interval: 100
+  experiment_name: dico_pressure_plate

@@ -1,0 +1,66 @@
+env:
+  ENV_NAME: football
+  env:
+    use_fixed_capabilities: false
+    fixed_capabilities: {}
+  ENV_KWARGS:
+    one_hot_encode_agent_id: true
+    n_agents: 3
+    num_red_agents: 3
+    ai_red_agents: true
+    ai_blue_agents: false
+    physically_different: false
+    enable_shooting: false
+    dense_reward: true
+    observe_teammates: true
+    observe_adversaries: true
+    continuous_actions: true
+ENV_NAME: football
+ALG: HyperMARL(MAPPO)
+LR: 0.0003
+NUM_ENVS: 256
+NUM_STEPS: 300
+TOTAL_TIMESTEPS: 250000000.0
+UPDATE_EPOCHS: 4
+NUM_MINIBATCHES: 8
+GAMMA: 0.99
+GAE_LAMBDA: 0.95
+CLIP_EPS: 0.2
+ENT_COEF: 0.01
+VF_COEF: 0.5
+MAX_GRAD_NORM: 0.5
+ACTIVATION: relu
+ANNEAL_LR: false
+HYPERNET_EMBEDDING_DIM: 8
+USE_AGENT_ID_EMBEDDINGS: true
+USE_BIAS_IN_HYPERNET: true
+HYPERNET_HIDDEN_DIMS:
+- 64
+SEED: 30
+JAX_THREEFRY_PARTITIONABLE: true
+NUM_SEEDS: 1
+ACTOR_LAYERS:
+- 64
+- 64
+CRITIC_LAYERS:
+- 64
+- 64
+INIT_SCALE: 1.41421356
+EXP_NAME: hypermarl_football
+EVAL_INTERVAL: 100000
+EVAL_EPISODES: 32
+EVAL_DETERMINISTIC: true
+EVAL_PARALLEL: true
+USE_CUSTOM_EVAL: true
+MAX_EVAL_STEPS: 300
+TEST_ENV_KWARGS: {}
+TRAIN_ENV_KWARGS:
+  auto_reset: true
+ACTION_SPACE_TYPE: continuous
+REWARD_SCALE: 1.0
+REWARD_CLIP: 10.0
+CAPTURE_VIDEO_INTERVAL: 5000000
+CHECKPOINT_INTERVAL: 1000000
+CHECKPOINT: false
+HANDLE_TERMINAL_OBS: true
+SAVE_EMBEDDINGS_INTERVAL: 5000

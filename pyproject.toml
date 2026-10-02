@@ -1,0 +1,24 @@
+[project]
+name = "hyperlora"
+version = "0.1.0"
+description = "Code for 'Events as Triggers for Behavioral Diversity in MARL'"
+requires-python = ">=3.11"
+dependencies = [
+  "jax==0.10.2",
+  "jaxlib==0.10.2",
+  "flax==0.12.8",
+  "optax==0.2.8",
+  "distrax==0.1.9",
+  "torch==2.14.0",
+  "numpy==2.4.6",
+  "vmas==1.5.2",
+  "pyyaml>=6.0",
+  "wandb>=0.22",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
