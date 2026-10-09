@@ -64,7 +64,7 @@ model:
   transformer_layers: 2
   use_cross_agent_attention: true
   task_embed_dim: 0
-  target_snd_dim: 0
+  target_nmd_dim: 0
   use_capability_context: false
   use_lidar_context: false
   use_positional_context: false
@@ -85,7 +85,7 @@ model:
   cash_use_two_layer_decoder: null
   adaptive_hypernetwork: true
 ppo:
-  num_episodes: 310
+  num_episodes: 200
   rollout_steps: 200
   ppo_epochs: 3
   ppo_clip_epsilon: 0.2
@@ -111,17 +111,16 @@ ppo:
   adapter_regularization_coef: 0.001
 diversity:
   use_diversity_control: false
-  use_adapter_snd: false
-  target_snd: 0.0
-  snd_moving_average_coef: 0.1
+  use_adapter_nmd: false
+  target_nmd: 0.0
+  nmd_moving_average_coef: 0.1
   max_diversity_scaling: 1000.0
-  min_snd_floor: 1.0e-06
-  num_snd_samples: null
-  adapter_snd_sample_size: 128
-  target_snd_list: []
-  target_snd_change_interval: 0
-  target_snd_mode: cycle
-  target_snd_sampler: {}
+  min_nmd_floor: 1.0e-06
+  adapter_nmd_sample_size: 128
+  target_nmd_list: []
+  target_nmd_change_interval: 0
+  target_nmd_mode: cycle
+  target_nmd_sampler: {}
 optimizer:
   learning_rate: 0.0006
   hn_learning_rate: 0.0006

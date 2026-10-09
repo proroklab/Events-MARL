@@ -113,7 +113,7 @@ class Scenario(BaseScenario):
         total_width = (self.n_agents - 1) * spacing
 
         # CRITICAL: Add randomization to spawn positions to ensure different hypernetwork inputs
-        # This creates different initial position contexts each episode → non-zero adapter SND
+        # This creates different initial position contexts each episode → non-zero adapter NMD
         if env_index is None:
             # Reset all environments: add random offset per environment
             # X offset: random shift along the line

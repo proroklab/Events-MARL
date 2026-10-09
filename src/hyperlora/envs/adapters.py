@@ -42,28 +42,28 @@ def _apply_capabilities_pressure_plate(config, env, capabilities, current_num_ag
 
 
 def _navigation_tokens(config, env, obs, obs_dim, num_envs, num_agents, current_num_agents,
-                       target_snd):
+                       target_nmd):
     return navigation_inputs(config, obs, obs_dim, current_num_agents, num_agents)
 
 
 def _dispersion_tokens(config, env, obs, obs_dim, num_envs, num_agents, current_num_agents,
-                       target_snd):
-    return dispersion_inputs(config, env, obs, num_envs, num_agents, target_snd)
+                       target_nmd):
+    return dispersion_inputs(config, env, obs, num_envs, num_agents, target_nmd)
 
 
 def _reverse_transport_tokens(config, env, obs, obs_dim, num_envs, num_agents,
-                              current_num_agents, target_snd):
+                              current_num_agents, target_nmd):
     return reverse_transport_inputs(config, env, num_envs, num_agents, current_num_agents)
 
 
 def _pressure_plate_tokens(config, env, obs, obs_dim, num_envs, num_agents,
-                           current_num_agents, target_snd):
+                           current_num_agents, target_nmd):
     return pressure_plate_inputs(config, env, num_envs, num_agents, current_num_agents)
 
 
 def _wind_flocking_tokens(config, env, obs, obs_dim, num_envs, num_agents, current_num_agents,
-                          target_snd):
-    return wind_flocking_inputs(config, obs, num_envs, num_agents, target_snd)
+                          target_nmd):
+    return wind_flocking_inputs(config, obs, num_envs, num_agents, target_nmd)
 
 
 def _reverse_transport_env_context(config, env, num_envs, num_agents):
@@ -80,7 +80,7 @@ def _pressure_plate_env_context(config, env, num_envs, num_agents):
 
 
 def _football_tokens(config, env, obs, obs_dim, num_envs, num_agents, current_num_agents,
-                     target_snd):
+                     target_nmd):
     return football_inputs(config, env, num_envs, num_agents)
 
 
@@ -90,13 +90,13 @@ def _apply_capabilities_football(config, env, capabilities, current_num_agents):
 
 def _navigation_nmd(*, buffer, config, hn_params, policy_params, hypernetwork, policy,
                     num_agents, rng_key, trajectory_obs):
-    return calculate_nmd(buffer, config.diversity.adapter_snd_sample_size, hn_params,
+    return calculate_nmd(buffer, config.diversity.adapter_nmd_sample_size, hn_params,
                          policy_params, hypernetwork, policy, rng_key, trajectory_obs)
 
 
 def _dispersion_nmd(*, buffer, config, hn_params, policy_params, hypernetwork, policy,
                     num_agents, rng_key, trajectory_obs):
-    return calculate_nmd_dispersion(buffer, config.diversity.adapter_snd_sample_size, hn_params,
+    return calculate_nmd_dispersion(buffer, config.diversity.adapter_nmd_sample_size, hn_params,
                                     policy_params, hypernetwork, policy, num_agents, rng_key,
                                     trajectory_obs)
 
@@ -104,7 +104,7 @@ def _dispersion_nmd(*, buffer, config, hn_params, policy_params, hypernetwork, p
 def _wind_flocking_nmd(*, buffer, config, hn_params, policy_params, hypernetwork, policy,
                        num_agents, rng_key, trajectory_obs):
     return calculate_nmd(
-        buffer, config.diversity.adapter_snd_sample_size, hn_params, policy_params, hypernetwork,
+        buffer, config.diversity.adapter_nmd_sample_size, hn_params, policy_params, hypernetwork,
         policy, rng_key, trajectory_obs,
         agent_positions_fn=lambda n: wind_flocking_adapter_positions(n, num_agents))
 
@@ -123,7 +123,7 @@ ADAPTERS = {
         make_events=lambda config, num_envs, num_agents, obs_dim, episode, ema: NoEvents(
             num_envs, num_agents),
         nmd=_dispersion_nmd,
-        buffer_token_fields=("context", "target_snd"),
+        buffer_token_fields=("context", "target_nmd"),
         apply_capabilities=_apply_capabilities,
     ),
     "reverse_transport": EnvAdapter(
@@ -157,7 +157,7 @@ ADAPTERS = {
         make_events=lambda config, num_envs, num_agents, obs_dim, episode, ema: WindFlockingEvents(
             config, num_envs, num_agents, episode, ema),
         nmd=_wind_flocking_nmd,
-        buffer_token_fields=("agent_positions", "target_snd"),
+        buffer_token_fields=("agent_positions", "target_nmd"),
         apply_capabilities=_apply_capabilities,
     ),
 }

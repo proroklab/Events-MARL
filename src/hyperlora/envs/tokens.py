@@ -16,16 +16,16 @@ class HypernetworkInputs:
     lidar: jnp.ndarray | None = None
     food_positions: jnp.ndarray | None = None
     agent_positions: jnp.ndarray | None = None
-    target_snd: jnp.ndarray | None = None
+    target_nmd: jnp.ndarray | None = None
     env_context: jnp.ndarray | None = None
     mask: jnp.ndarray | None = None
 
-    FIELDS = ("task", "context", "lidar", "food_positions", "agent_positions", "target_snd",
+    FIELDS = ("task", "context", "lidar", "food_positions", "agent_positions", "target_nmd",
               "env_context")
 
     def as_args(self):
         return (self.task, self.context, self.lidar, self.food_positions, self.agent_positions,
-                self.target_snd, self.env_context, self.mask)
+                self.target_nmd, self.env_context, self.mask)
 
     def flatten_rows(self, batch_size: int) -> dict:
         rows = {}
@@ -82,8 +82,8 @@ def generate_positional_encoding(num_agents: int, encoding_dim: int) -> torch.Te
     return encoding
 
 
-def target_token(target_snd, num_envs: int, env_num_agents: int, dim: int) -> torch.Tensor:
-    values = torch.as_tensor(target_snd, dtype=torch.float32).reshape(-1)
+def target_token(target_nmd, num_envs: int, env_num_agents: int, dim: int) -> torch.Tensor:
+    values = torch.as_tensor(target_nmd, dtype=torch.float32).reshape(-1)
     if values.numel() == 1:
         return torch.full((num_envs, env_num_agents, dim), float(values[0]), dtype=torch.float32)
     if values.numel() != num_envs:
@@ -97,7 +97,7 @@ def extract_agent_positions(obs_list: list[torch.Tensor]) -> torch.Tensor:
 
 
 def dispersion_inputs(config: Config, env, obs_list: list[torch.Tensor], num_envs: int,
-                      env_num_agents: int, target_snd: float) -> HypernetworkInputs:
+                      env_num_agents: int, target_nmd: float) -> HypernetworkInputs:
     model = config.model
     if not (model.use_capability_context and model.use_positional_context):
         raise NotImplementedError("Dispersion expects capability + positional context ")
@@ -109,12 +109,12 @@ def dispersion_inputs(config: Config, env, obs_list: list[torch.Tensor], num_env
     encoding = generate_positional_encoding(env_num_agents, model.positional_encoding_dim)
     context = torch.cat([context, encoding.unsqueeze(0).expand(num_envs, -1, -1)], dim=-1)
 
-    target = target_token(target_snd, num_envs, env_num_agents, model.target_snd_dim)
+    target = target_token(target_nmd, num_envs, env_num_agents, model.target_nmd_dim)
 
     return HypernetworkInputs(
         context=jnp.asarray(context.cpu().numpy()),
         agent_positions=jnp.asarray(extract_agent_positions(obs_list).cpu().numpy()),
-        target_snd=jnp.asarray(target.cpu().numpy()),
+        target_nmd=jnp.asarray(target.cpu().numpy()),
         mask=None,
     )
 
@@ -147,7 +147,7 @@ def reverse_transport_inputs(config: Config, env, num_envs: int, env_num_agents:
 def navigation_inputs(config: Config, obs_list: list[torch.Tensor], obs_dim: int,
                       current_num_agents: int, env_num_agents: int) -> HypernetworkInputs:
     model = config.model
-    if model.use_capability_context or model.task_embed_dim or model.target_snd_dim:
+    if model.use_capability_context or model.task_embed_dim or model.target_nmd_dim:
         raise NotImplementedError(
             "the Navigation token is LiDAR-only"
         )
@@ -212,18 +212,18 @@ def pressure_plate_inputs(config: Config, env, num_envs: int, env_num_agents: in
 
 
 def wind_flocking_inputs(config: Config, obs_list: list[torch.Tensor], num_envs: int,
-                         env_num_agents: int, target_snd: float) -> HypernetworkInputs:
+                         env_num_agents: int, target_nmd: float) -> HypernetworkInputs:
     model = config.model
     if not model.use_agent_position_context or model.agent_position_dim != 2:
         raise NotImplementedError("Wind Flocking expects a 2-D agent-position context ")
-    if model.target_snd_dim != 1:
+    if model.target_nmd_dim != 1:
         raise NotImplementedError("Wind Flocking expects a 1-D target-NMD token ")
 
     positions = extract_agent_positions(obs_list)
-    target = target_token(target_snd, num_envs, env_num_agents, model.target_snd_dim)
+    target = target_token(target_nmd, num_envs, env_num_agents, model.target_nmd_dim)
     return HypernetworkInputs(
         agent_positions=jnp.asarray(positions.cpu().numpy()),
-        target_snd=jnp.asarray(target.cpu().numpy()),
+        target_nmd=jnp.asarray(target.cpu().numpy()),
         mask=None,
     )
 

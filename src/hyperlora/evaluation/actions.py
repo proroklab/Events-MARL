@@ -19,7 +19,7 @@ def ours(models, config, adapter, num_agents, obs_dim, hn_apply, events_factory=
 
     def tokens_fn(env, obs, scaling):
         tokens = adapter.build_tokens(config, env, obs, obs_dim, num_envs, num_agents,
-                                      num_agents, config.diversity.target_snd)
+                                      num_agents, config.diversity.target_nmd)
         tokens = type(tokens)(**{name: getattr(tokens, name) for name in tokens.FIELDS},
                               mask=None)
         events = events_factory(env, obs) if events_factory is not None else None

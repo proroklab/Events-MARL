@@ -69,8 +69,8 @@ class Hypernetwork(nn.Module):
     lidar_dim: int = 0  # Dimension of initial lidar readings (0 if not used)
     food_position_dim: int = 0  # Dimension of food position vectors (0 if not used)
     agent_position_dim: int = 0  # Dimension of agent position vectors (0 if not used)
-    target_snd_dim: int = (
-        0  # Dimension of target SND input (0 if not used, typically 1)
+    target_nmd_dim: int = (
+        0  # Dimension of target NMD input (0 if not used, typically 1)
     )
     env_context_dim: int = (
         0  # Dimension of environment context (e.g., package properties, 0 if not used)
@@ -91,7 +91,7 @@ class Hypernetwork(nn.Module):
         lidar_vectors=None,
         food_position_vectors=None,
         agent_position_vectors=None,
-        target_snd_vectors=None,
+        target_nmd_vectors=None,
         env_context_vectors=None,
         mask=None,
         diversity_scaling=1.0,
@@ -106,7 +106,7 @@ class Hypernetwork(nn.Module):
                                  Pass None when context_dim == 0.
             lidar_vectors: Optional initial lidar readings (num_envs, num_agents, lidar_dim)
             food_position_vectors: Optional relative position to matching food (num_envs, num_agents, food_position_dim)
-            target_snd_vectors: Optional target SND values (num_envs, num_agents, target_snd_dim)
+            target_nmd_vectors: Optional target NMD values (num_envs, num_agents, target_nmd_dim)
             env_context_vectors: Optional environment context (e.g., package properties) (num_envs, num_agents, env_context_dim)
             mask: Optional attention mask for dynamic agent counts (num_envs, 1, num_agents, num_agents)
             diversity_scaling: Additional scaling for final layer only (diversity control, default: 1.0)
@@ -126,7 +126,7 @@ class Hypernetwork(nn.Module):
                 lidar_vectors,
                 food_position_vectors,
                 agent_position_vectors,
-                target_snd_vectors,
+                target_nmd_vectors,
             ]
             if v is not None
         )
@@ -168,14 +168,14 @@ class Hypernetwork(nn.Module):
                 )
             agent_features.append(agent_position_vectors)
 
-        # Add target SND features if provided
-        if target_snd_vectors is not None and self.target_snd_dim > 0:
-            if len(target_snd_vectors.shape) != 3:
+        # Add target NMD features if provided
+        if target_nmd_vectors is not None and self.target_nmd_dim > 0:
+            if len(target_nmd_vectors.shape) != 3:
                 raise ValueError(
-                    f"target_snd_vectors must have 3 dimensions (num_envs, num_agents, target_snd_dim), "
-                    f"got shape {target_snd_vectors.shape}"
+                    f"target_nmd_vectors must have 3 dimensions (num_envs, num_agents, target_nmd_dim), "
+                    f"got shape {target_nmd_vectors.shape}"
                 )
-            agent_features.append(target_snd_vectors)
+            agent_features.append(target_nmd_vectors)
         # Add environment context features if provided (broadcast to all agents)
         if env_context_vectors is not None and self.env_context_dim > 0:
             if len(env_context_vectors.shape) != 3:

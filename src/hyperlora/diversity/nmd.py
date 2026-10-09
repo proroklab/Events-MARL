@@ -16,7 +16,7 @@ def wasserstein_distance_gaussian(mean1, std1, mean2, std2, just_mean: bool = Tr
     return jnp.sqrt(mean_dist**2 + cov_dist**2)
 
 
-def compute_snd_from_action_means(action_means, action_stds=None, just_mean: bool = True) -> float:
+def compute_nmd_from_action_means(action_means, action_stds=None, just_mean: bool = True) -> float:
     num_adapters = action_means.shape[0]
     if num_adapters < 2:
         return 0.0
@@ -128,7 +128,7 @@ def calculate_nmd(
         repeat(lidar_batch),
         zeros(hypernetwork.food_position_dim),
         agent_positions,
-        zeros(hypernetwork.target_snd_dim),
+        zeros(hypernetwork.target_nmd_dim),
         zeros(hypernetwork.env_context_dim),
         mask=None,
         diversity_scaling=diversity_scaling,
@@ -147,7 +147,7 @@ def calculate_nmd(
     action_dim = means.shape[-1]
     means = means.reshape(num_adapters, num_eval_obs, action_dim)
     stds = jnp.exp(log_stds).reshape(num_adapters, num_eval_obs, action_dim)
-    return compute_snd_from_action_means(means, stds)
+    return compute_nmd_from_action_means(means, stds)
 
 
 def calculate_nmd_dispersion(
@@ -213,7 +213,7 @@ def calculate_nmd_dispersion(
         None,
         food,
         agent_positions,
-        zeros(hypernetwork.target_snd_dim),
+        zeros(hypernetwork.target_nmd_dim),
         zeros(hypernetwork.env_context_dim),
         mask=None,
         diversity_scaling=diversity_scaling,
@@ -231,5 +231,5 @@ def calculate_nmd_dispersion(
     means = jnp.transpose(means.reshape(actual_sample_size, num_agents, action_dim), (1, 0, 2))
     stds = jnp.transpose(
         jnp.exp(log_stds).reshape(actual_sample_size, num_agents, action_dim), (1, 0, 2))
-    return compute_snd_from_action_means(means, stds)
+    return compute_nmd_from_action_means(means, stds)
 

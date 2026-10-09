@@ -56,7 +56,7 @@ class NavigationEvents:
         updated = jnp.asarray(np.clip(updated, -1.0, 1.0))
         subset = updated[indices][:, None, :]
 
-        entries = [{"task": None, "context": None, "lidar": subset[i, 0], "target_snd": None,
+        entries = [{"task": None, "context": None, "lidar": subset[i, 0], "target_nmd": None,
                     "query_type": "requery", "hidden_state": None,
                     "agent_idx": int(idx) % self.num_agents}
                    for i, idx in enumerate(indices)]

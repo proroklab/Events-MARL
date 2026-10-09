@@ -50,7 +50,7 @@ class ModelConfig:
     transformer_layers: int
     use_cross_agent_attention: bool
     task_embed_dim: int
-    target_snd_dim: int
+    target_nmd_dim: int | None  # Ours only; absent (None) for the other methods
     use_capability_context: bool
     use_lidar_context: bool
     use_positional_context: bool
@@ -97,19 +97,37 @@ class PPOConfig:
 
 
 @dataclass(frozen=True)
-class DiversityConfig:
+class NMDConfig:
+    """Ours: diversity measured as NMD between hypernetwork behaviours."""
     use_diversity_control: bool
-    use_adapter_snd: bool
+    use_adapter_nmd: bool
+    target_nmd: float
+    nmd_moving_average_coef: float
+    max_diversity_scaling: float
+    min_nmd_floor: float
+    adapter_nmd_sample_size: int
+    target_nmd_list: tuple
+    target_nmd_change_interval: int
+    target_nmd_mode: str
+    target_nmd_sampler: dict
+
+
+@dataclass(frozen=True)
+class SNDConfig:
+    """DiCo: diversity measured as SND between agents (Bettini et al.)."""
+    use_diversity_control: bool
     target_snd: float
     snd_moving_average_coef: float
     max_diversity_scaling: float
     min_snd_floor: float
-    adapter_snd_sample_size: int
-    num_snd_samples: int | None
-    target_snd_list: tuple
-    target_snd_change_interval: int
-    target_snd_mode: str
-    target_snd_sampler: dict
+    num_snd_samples: int
+
+
+# The `diversity` section each method takes; PS and CASH have none.
+DIVERSITY_SECTIONS = {"ours": NMDConfig, "dico": SNDConfig, "ps": None, "cash": None}
+
+# Fields only some methods take; for every other method the key must be absent and reads as None.
+_METHOD_ONLY_FIELDS = {("model", "target_nmd_dim"): ("ours",)}
 
 
 @dataclass(frozen=True)
@@ -149,20 +167,25 @@ class Config:
     env: EnvConfig
     model: ModelConfig
     ppo: PPOConfig
-    diversity: DiversityConfig
+    diversity: NMDConfig | SNDConfig | None
     optimizer: OptimizerConfig
     evaluation: EvalConfig
     logging: LoggingConfig
 
     def to_dict(self) -> dict:
-        return dataclasses.asdict(self)
+        data = dataclasses.asdict(self)
+        if data["diversity"] is None:
+            del data["diversity"]
+        for (section, key), methods in _METHOD_ONLY_FIELDS.items():
+            if self.method not in methods:
+                del data[section][key]
+        return data
 
 
 _SECTIONS = {
     "env": EnvConfig,
     "model": ModelConfig,
     "ppo": PPOConfig,
-    "diversity": DiversityConfig,
     "optimizer": OptimizerConfig,
     "evaluation": EvalConfig,
     "logging": LoggingConfig,
@@ -170,18 +193,21 @@ _SECTIONS = {
 _TOP_LEVEL = {"method", "seed", "jax_threefry_partitionable"}
 _TUPLE_FIELDS = {"policy_hidden_dims", "speed_range", "lidar_range_range", "eval_max_speeds",
                  "max_speed_range",
-                 "force_multiplier_range", "target_snd_list"}
+                 "force_multiplier_range", "target_nmd_list"}
 
 
-def _build(section: str, cls, data: Mapping[str, Any]):
+def _build(section: str, cls, data: Mapping[str, Any], method: str):
     fields = {f.name for f in dataclasses.fields(cls)}
+    absent = {key for (sec, key), methods in _METHOD_ONLY_FIELDS.items()
+              if sec == section and method not in methods}
     given = set(data)
-    if missing := sorted(fields - given):
+    if missing := sorted(fields - absent - given):
         raise ValueError(f"config section '{section}' is missing required keys: {missing}")
-    if unknown := sorted(given - fields):
-        raise ValueError(f"config section '{section}' has unknown keys: {unknown}")
+    if unknown := sorted(given - (fields - absent)):
+        raise ValueError(f"config section '{section}' has unknown keys for method "
+                         f"'{method}': {unknown}")
     values = {k: (tuple(v) if k in _TUPLE_FIELDS and v is not None else v) for k, v in data.items()}
-    return cls(**values)
+    return cls(**values, **{key: None for key in absent})
 
 
 def load_config(path: str | Path, overrides: Mapping[str, Any] | None = None) -> Config:
@@ -198,24 +224,34 @@ def load_config(path: str | Path, overrides: Mapping[str, Any] | None = None) ->
             raise ValueError(f"override '{dotted}' names an unknown section")
         raw[section][key] = value
 
-    top = {k: v for k, v in raw.items() if k not in _SECTIONS}
+    top = {k: v for k, v in raw.items() if k not in _SECTIONS and k != "diversity"}
     if unknown := sorted(set(top) - _TOP_LEVEL):
         raise ValueError(f"config has unknown top-level keys: {unknown}")
     if missing := sorted(_TOP_LEVEL - set(top)):
         raise ValueError(f"config is missing required top-level keys: {missing}")
-    if top["method"] not in METHODS:
-        raise ValueError(f"method must be one of {METHODS}, got {top['method']!r}")
+    method = top["method"]
+    if method not in METHODS:
+        raise ValueError(f"method must be one of {METHODS}, got {method!r}")
     if missing := sorted(set(_SECTIONS) - set(raw)):
         raise ValueError(f"config is missing sections: {missing}")
+
+    diversity_cls = DIVERSITY_SECTIONS[method]
+    if diversity_cls is None and "diversity" in raw:
+        raise ValueError(f"method '{method}' has no diversity measure; remove the "
+                         "'diversity' section")
+    if diversity_cls is not None and "diversity" not in raw:
+        raise ValueError("config is missing sections: ['diversity']")
 
     if not isinstance(top["jax_threefry_partitionable"], bool):
         raise ValueError("jax_threefry_partitionable must be true or false")
 
     return Config(
-        method=top["method"],
+        method=method,
         seed=int(top["seed"]),
         jax_threefry_partitionable=top["jax_threefry_partitionable"],
-        **{name: _build(name, cls, raw[name]) for name, cls in _SECTIONS.items()},
+        diversity=(None if diversity_cls is None
+                   else _build("diversity", diversity_cls, raw["diversity"], method)),
+        **{name: _build(name, cls, raw[name], method) for name, cls in _SECTIONS.items()},
     )
 
 

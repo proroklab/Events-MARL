@@ -41,11 +41,11 @@ def _match_training_package_mass(config: Config, env, num_agents: int) -> None:
     scenario.update_package_properties(package_mass=mass_per_agent * num_agents)
 
 
-def _diversity_scaling(config: Config, current_snd_ma: float) -> float:
-    diversity = config.diversity
-    if not diversity.use_diversity_control:
+def _diversity_scaling(config: Config, nmd_ema: float | None) -> float:
+    if config.method != "ours" or not config.diversity.use_diversity_control:
         return 1.0
-    scaling = float(np.sqrt(diversity.target_snd / max(current_snd_ma, diversity.min_snd_floor)))
+    diversity = config.diversity
+    scaling = float(np.sqrt(diversity.target_nmd / max(nmd_ema, diversity.min_nmd_floor)))
     return float(np.clip(scaling, 0.001, np.sqrt(diversity.max_diversity_scaling)))
 
 
@@ -98,7 +98,7 @@ def _buffer_entries(tokens, fields: tuple, num_envs: int, num_agents: int) -> li
     entries = []
     for env_idx in range(num_envs):
         for agent_idx in range(num_agents):
-            entry = {"task": None, "context": None, "lidar": None, "target_snd": None,
+            entry = {"task": None, "context": None, "lidar": None, "target_nmd": None,
                      "query_type": "initial", "hidden_state": None, "agent_idx": agent_idx}
             for name in fields:
                 value = getattr(tokens, name)
@@ -116,13 +116,13 @@ def _is_dispersion_like(env) -> bool:
     return scenario is not None and "dispersion" in type(scenario).__module__.lower()
 
 
-def _update_eval_ema(config: Config, current_snd_ma: float, measured: float) -> float:
-    coef = config.diversity.snd_moving_average_coef
-    return coef * current_snd_ma + (1.0 - coef) * measured
+def _update_eval_ema(config: Config, nmd_ema: float, measured: float) -> float:
+    coef = config.diversity.nmd_moving_average_coef
+    return coef * nmd_ema + (1.0 - coef) * measured
 
 
 def run_quantitative_evaluation(*, config: Config, env, models, adapter, num_agents: int,
-                                obs_dim: int, current_snd_ma: float, actions_fn,
+                                obs_dim: int, actions_fn, nmd_ema: float | None = None,
                                 tokens_fn=None, num_eval_episodes: int | None = None,
                                 max_eval_steps: int | None = None, after_step_fn=None) -> dict:
     evaluation = config.evaluation
@@ -133,7 +133,7 @@ def run_quantitative_evaluation(*, config: Config, env, models, adapter, num_age
     fixed = eval_capabilities(config, num_agents)
     if evaluation.match_training_capabilities:
         _match_training_package_mass(config, env, num_agents)
-    scaling = _diversity_scaling(config, current_snd_ma)
+    scaling = _diversity_scaling(config, nmd_ema)
 
     is_football, is_dispersion_like = _is_football(env), _is_dispersion_like(env)
     total_rewards: list = []
@@ -146,7 +146,8 @@ def run_quantitative_evaluation(*, config: Config, env, models, adapter, num_age
     football_blue_goals = football_red_goals = 0
     football_wins = football_draws = football_losses = 0
 
-    measures_nmd = (config.diversity.use_diversity_control and config.diversity.use_adapter_snd
+    measures_nmd = (config.method == "ours" and config.diversity.use_diversity_control
+                    and config.diversity.use_adapter_nmd
                     and models.hn_state is not None)
 
     for episode in range(num_eval_episodes):
@@ -255,8 +256,8 @@ def run_quantitative_evaluation(*, config: Config, env, models, adapter, num_age
                 rng_key=jax.random.PRNGKey(episode * 1000 + 42),
                 trajectory_obs=trajectory_obs or None)
             if np.isfinite(measured):
-                current_snd_ma = _update_eval_ema(config, current_snd_ma, measured)
-            scaling = _diversity_scaling(config, current_snd_ma)
+                nmd_ema = _update_eval_ema(config, nmd_ema, measured)
+            scaling = _diversity_scaling(config, nmd_ema)
 
         total_rewards.extend(batch_rewards)
         episode_lengths.extend(batch_lengths)

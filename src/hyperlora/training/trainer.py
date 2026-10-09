@@ -47,7 +47,7 @@ def _initial_buffer_entries(tokens, fields: tuple, num_envs: int, active_agents:
     entries = []
     for env_idx in range(num_envs):
         for agent_idx in range(active_agents):
-            entry = {"task": None, "context": None, "lidar": None, "target_snd": None,
+            entry = {"task": None, "context": None, "lidar": None, "target_nmd": None,
                      "query_type": "initial", "hidden_state": None, "agent_idx": agent_idx}
             for name in fields:
                 value = getattr(tokens, name)
@@ -65,7 +65,7 @@ def _token_batches(token_rows: list, tokens, num_batches: int, num_envs: int,
             continue
         flat = jnp.concatenate([row[name] for row in token_rows], axis=0)
         batch[name] = flat.reshape(num_batches * num_envs, num_agents, -1)
-    for name in ("task", "target_snd"):
+    for name in ("task", "target_nmd"):
         value = getattr(tokens, name)
         batch[name] = None if value is None else jnp.tile(
             value[None, :, :, :], (num_batches, 1, 1, 1)).reshape(
@@ -135,7 +135,7 @@ def token_dims(config: Config, obs_dim: int) -> dict[str, int]:
         "context": context,
         "lidar": lidar,
         "agent_position": model.agent_position_dim if model.use_agent_position_context else 0,
-        "target_snd": model.target_snd_dim,
+        "target_nmd": model.target_nmd_dim or 0,
         "task": model.task_embed_dim,
         "env_context": env_context,
     }
@@ -162,7 +162,7 @@ def build_models(config: Config, obs_dim: int, action_dim: int, num_agents: int)
         lidar_dim=ldim,
         food_position_dim=0,
         agent_position_dim=dims["agent_position"],
-        target_snd_dim=dims["target_snd"],
+        target_nmd_dim=dims["target_nmd"],
         env_context_dim=dims["env_context"],
         max_agents=config.env.max_agents,
         transformer_dim=model.transformer_dim,
@@ -203,7 +203,7 @@ def build_models(config: Config, obs_dim: int, action_dim: int, num_agents: int)
         dummy(ldim),
         None,
         dummy(dims["agent_position"]),
-        dummy(dims["target_snd"]),
+        dummy(dims["target_nmd"]),
         dummy(dims["env_context"]),
         None,
     )["params"]
@@ -351,8 +351,8 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
         models, config, adapter, num_agents, obs_dim, hn_apply)
 
     diversity = config.diversity
-    nmd_ema = diversity.target_snd
-    target_sampler = build_sampler(diversity.target_snd_sampler)
+    nmd_ema = diversity.target_nmd
+    target_sampler = build_sampler(diversity.target_nmd_sampler)
     target_per_env = None
     previous_trajectory_obs = None
     value_clip_range = config.ppo.ppo_clip_epsilon if config.ppo.clip_value_loss else None
@@ -372,12 +372,12 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
         adapter.apply_capabilities(config, env, capabilities, current_num_agents)
         obs = env.reset()
 
-        target_snd = episode_target(config, episode)
-        target_token_value = target_snd
+        target_nmd = episode_target(config, episode)
+        target_token_value = target_nmd
         if target_sampler is not None:
             target_per_env = target_sampler.per_env(config.env.num_envs, np_rng)
             target_token_value = target_per_env
-            target_snd = float(target_per_env.mean())
+            target_nmd = float(target_per_env.mean())
         tokens = adapter.build_tokens(config, env, obs, obs_dim, config.env.num_envs, num_agents,
                                       current_num_agents, target_token_value)
         adapters = hn_apply(tokens, 1.0)
@@ -386,7 +386,7 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
             current_num_agents if config.env.mixed_agent_training else num_agents))
 
         nmd = None
-        if diversity.use_adapter_snd and buffer:
+        if diversity.use_adapter_nmd and buffer:
             nmd = adapter.nmd(
                 buffer=buffer, config=config, hn_params=models.hn_state.params,
                 policy_params=models.policy_state.params, hypernetwork=models.hypernetwork,
@@ -396,9 +396,9 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
             )
         alpha = 1.0
         if diversity.use_diversity_control and nmd is not None and np.isfinite(nmd):
-            nmd_ema = update_ema(nmd_ema, nmd, diversity.snd_moving_average_coef)
+            nmd_ema = update_ema(nmd_ema, nmd, diversity.nmd_moving_average_coef)
             alpha = alpha_mean_over_envs(
-                alpha_from_ema(target_snd, nmd_ema, diversity),
+                alpha_from_ema(target_nmd, nmd_ema, diversity),
                 config.env.num_envs)
             adapters = hn_apply(
                 tokens, alpha_broadcast(alpha, config.env.num_envs, num_agents))
@@ -471,7 +471,7 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
                     obs_batch[rows], global_state_batch[env_rows], actions_batch[rows],
                     old_log_probs_batch[rows], advantages_batch[rows], returns_batch[rows],
                     *(None if token_batch[name] is None else token_batch[name][env_rows]
-                      for name in ("task", "context", "lidar", "agent_positions", "target_snd",
+                      for name in ("task", "context", "lidar", "agent_positions", "target_nmd",
                                    "env_context")),
                     None if mask_batch is None else mask_batch[env_rows],
                     config.ppo.ppo_clip_epsilon, entropy_coef, config.ppo.value_loss_coef,
@@ -490,7 +490,7 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
             "nmd": nmd,
             "alpha": alpha,
             "nmd_ema": nmd_ema,
-            "target_nmd": target_snd,
+            "target_nmd": target_nmd,
             **({"target_nmd_min": float(target_per_env.min()),
                 "target_nmd_max": float(target_per_env.max())}
                if target_sampler is not None else {}),
@@ -502,7 +502,7 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
         })
 
         _maybe_evaluate(config, episode, env, logger, models=models, adapter=adapter,
-                        num_agents=num_agents, obs_dim=obs_dim, current_snd_ma=nmd_ema,
+                        num_agents=num_agents, obs_dim=obs_dim, nmd_ema=nmd_ema,
                         actions_fn=eval_actions_fn, tokens_fn=eval_tokens_fn,
                         after_step_fn=eval_after_step_fn)
 
@@ -510,13 +510,13 @@ def train_ours(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
             save_checkpoint(checkpoint_dir / f"checkpoint_{episode}.npz",
                             policy_params=models.policy_state.params,
                             critic_params=models.critic_state.params, episode=episode,
-                            hn_params=models.hn_state.params, current_snd_ma=nmd_ema)
+                            hn_params=models.hn_state.params, nmd_ema=nmd_ema)
 
     save_checkpoint(checkpoint_dir / "final_checkpoint.npz",
                     policy_params=models.policy_state.params,
                     critic_params=models.critic_state.params, episode=config.ppo.num_episodes,
                     hn_params=models.hn_state.params,
-                    current_snd_ma=nmd_ema if diversity.use_diversity_control else None)
+                    nmd_ema=nmd_ema if diversity.use_diversity_control else None)
     return models
 
 
@@ -540,7 +540,6 @@ def train_ps(config: Config, log_dir: Path | None = None, checkpoint_dir: Path |
     num_envs = config.env.num_envs
     batch_size = num_envs * num_agents
     input_dim = policy_obs_dim(config, obs_dim)
-    snd_ma = config.diversity.target_snd if config.diversity.use_diversity_control else None
     adapters = zero_adapters(batch_size, input_dim, tuple(config.model.policy_hidden_dims),
                              action_dim)
     empty_tokens = HypernetworkInputs()
@@ -638,19 +637,17 @@ def train_ps(config: Config, log_dir: Path | None = None, checkpoint_dir: Path |
 
         _maybe_evaluate(config, episode, env, logger, models=models, adapter=adapter,
                         num_agents=num_agents, obs_dim=obs_dim,
-                        current_snd_ma=snd_ma if snd_ma is not None else config.diversity.target_snd,
                         actions_fn=eval_actions_fn, tokens_fn=eval_tokens_fn)
 
         if config.logging.save_interval and episode and episode % config.logging.save_interval == 0:
             save_checkpoint(checkpoint_dir / f"checkpoint_{episode}.npz",
                             policy_params=models.policy_state.params,
-                            critic_params=models.critic_state.params, episode=episode,
-                            current_snd_ma=snd_ma)
+                            critic_params=models.critic_state.params, episode=episode)
 
     save_checkpoint(checkpoint_dir / "final_checkpoint.npz",
                     policy_params=models.policy_state.params,
                     critic_params=models.critic_state.params,
-                    episode=config.ppo.num_episodes, current_snd_ma=snd_ma)
+                    episode=config.ppo.num_episodes)
     return models
 
 
@@ -830,19 +827,19 @@ def train_dico(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
         })
 
         _maybe_evaluate(config, episode, env, logger, models=models, adapter=adapter,
-                        num_agents=num_agents, obs_dim=obs_dim, current_snd_ma=snd_ema,
+                        num_agents=num_agents, obs_dim=obs_dim,
                         actions_fn=eval_actions_fn, tokens_fn=eval_tokens_fn)
 
         if config.logging.save_interval and episode and episode % config.logging.save_interval == 0:
             save_checkpoint(checkpoint_dir / f"checkpoint_{episode}.npz",
                             policy_params=models.policy_state.params,
                             critic_params=models.critic_state.params, episode=episode,
-                            current_snd_ma=snd_ema)
+                            snd_ema=snd_ema)
 
     save_checkpoint(checkpoint_dir / "final_checkpoint.npz",
                     policy_params=models.policy_state.params,
                     critic_params=models.critic_state.params,
-                    episode=config.ppo.num_episodes, current_snd_ma=snd_ema)
+                    episode=config.ppo.num_episodes, snd_ema=snd_ema)
     return models
 
 
@@ -1024,7 +1021,6 @@ def train_cash(config: Config, log_dir: Path | None = None, checkpoint_dir: Path
 
         _maybe_evaluate(config, episode, env, logger, models=models, adapter=adapter,
                         num_agents=num_agents, obs_dim=obs_dim,
-                        current_snd_ma=config.diversity.target_snd,
                         actions_fn=eval_actions_fn, tokens_fn=eval_tokens_fn)
 
         if config.logging.save_interval and episode and episode % config.logging.save_interval == 0:

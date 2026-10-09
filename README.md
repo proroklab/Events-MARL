@@ -39,7 +39,9 @@ The published runs used seeds 0, 42, 342, 3421 and 34210.
 ## Configs
 
 One fully specified config per method and environment in `configs/main/`. Every key is required;
-unknown keys are rejected.
+unknown keys are rejected. The `diversity` section depends on the method: Ours measures and controls
+NMD (`target_nmd`, …), DiCo measures and controls SND (`target_snd`, …), and PS and CASH have no
+`diversity` section.
 
 | Environment | Ours, PS, DiCo, CASH | HyperMARL |
 |---|---|---|
@@ -59,7 +61,9 @@ unknown keys are rejected.
   `avg_agents_at_goal_percentage`; on Navigation also `success_rate`, the percentage of food found;
 * `logs/resolved_config.yaml` — the config the run actually used, overrides included;
 * `checkpoints/checkpoint_<episode>.npz` every `logging.save_interval` episodes, and
-  `checkpoints/final_checkpoint.npz`.
+  `checkpoints/final_checkpoint.npz`. Ours checkpoints also hold `nmd_ema`, the running NMD average
+  α is computed from; DiCo's hold `snd_ema`. `training.checkpointing.load_checkpoint` also reads
+  older checkpoints, which stored either under `current_snd_ma`.
 
 HyperMARL writes `metrics.jsonl`, `eval_metrics.json`, `final_params.npz` and `resolved_config.json`
 into its `--out` directory; its evaluation rows carry `eval/completion_rate`, and on Navigation

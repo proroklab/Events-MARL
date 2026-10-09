@@ -67,7 +67,7 @@ class PressurePlateEvents:
             updated = HypernetworkInputs(
                 task=tokens.task, context=tokens.context, lidar=tokens.lidar,
                 food_positions=tokens.food_positions, agent_positions=tokens.agent_positions,
-                target_snd=tokens.target_snd,
+                target_nmd=tokens.target_nmd,
                 env_context=jnp.asarray(context.cpu().numpy()), mask=tokens.mask)
 
         flat = np.repeat(should_requery.cpu().numpy(), self.num_agents)

@@ -16,10 +16,10 @@ class WindFlockingEvents:
         self.episode = episode
         self.ema = ema
         diversity = config.diversity
-        self.targets = tuple(diversity.target_snd_list)
-        self.interval = diversity.target_snd_change_interval
+        self.targets = tuple(diversity.target_nmd_list)
+        self.interval = diversity.target_nmd_change_interval
         self.enabled = bool(self.targets) and self.interval > 0
-        if self.enabled and diversity.target_snd_mode != "cycle":
+        if self.enabled and diversity.target_nmd_mode != "cycle":
             raise NotImplementedError(
                 "only the 'cycle' target-NMD schedule is supported")
 

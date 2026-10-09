@@ -337,7 +337,7 @@ class LoRAPolicy(nn.Module):
                 adapter_out = jnp.einsum("bi,bri->br", h, adapters[A_key])
                 # adapter_out: (batch, lora_rank), B: (batch, output_dim, lora_rank)
                 adapter_out = jnp.einsum("br,bor->bo", adapter_out, adapters[B_key])
-                # Clip adapter contribution (loose bound to preserve adapter SND calculation)
+                # Clip adapter contribution (loose bound to preserve adapter NMD calculation)
                 adapter_out = jnp.clip(adapter_out, -1000.0, 1000.0)
             else:
                 adapter_out = 0.0
@@ -353,7 +353,7 @@ class LoRAPolicy(nn.Module):
             adapter_out = jnp.einsum("bh,brh->br", h, adapters[A_key])
             adapter_out = jnp.einsum("br,bar->ba", adapter_out, adapters[B_key])
             # Clip final adapter contribution - use large threshold to avoid affecting
-            # SND calculations. Clipping compresses pairwise distances and breaks
+            # NMD calculations. Clipping compresses pairwise distances and breaks
             # the proportionality between scaled and unscaled diversity metrics.
             adapter_out = jnp.clip(adapter_out, -1000.0, 1000.0)
         else:

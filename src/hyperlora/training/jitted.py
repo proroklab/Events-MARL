@@ -6,11 +6,11 @@ import jax
 def make_jitted(policy, hypernetwork, critic):
     @jax.jit
     def get_static_adapters(hn_params, task_batch, context_batch, lidar_batch,
-                            food_positions_batch, agent_positions_batch, target_snd_batch,
+                            food_positions_batch, agent_positions_batch, target_nmd_batch,
                             env_context_batch, mask, diversity_scaling=1.0):
         return hypernetwork.apply(
             {"params": hn_params}, task_batch, context_batch, lidar_batch, food_positions_batch,
-            agent_positions_batch, target_snd_batch, env_context_batch, mask, diversity_scaling,
+            agent_positions_batch, target_nmd_batch, env_context_batch, mask, diversity_scaling,
         )
 
     @jax.jit
